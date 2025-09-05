@@ -1,0 +1,31 @@
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.env/
+venv/
+.venv/
+env/
+
+# Development / editor files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Local data & indexes (don’t bake into image)
+data/
+indexes/
+
+# Logs
+*.log
+
+# Dockerfile itself not needed inside image
+Dockerfile

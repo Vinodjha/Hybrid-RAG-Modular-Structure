@@ -1,0 +1,32 @@
+# FastAPI + ASGI server
+fastapi
+uvicorn
+
+# Environment variables
+python-dotenv
+
+# Pydantic (already included with FastAPI, but pinning is safe)
+pydantic
+
+# Hugging Face + transformers
+transformers
+huggingface-hub
+
+# Sentence embeddings + reranker
+sentence-transformers
+
+# FAISS (CPU version)
+faiss-cpu
+
+# Sparse retriever
+scikit-learn
+
+# LangChain utils (for PDF loader + text splitter)
+langchain-community
+langchain-text-splitters
+
+# PDF parsing
+pypdf
+
+# Groq client SDK
+groq
