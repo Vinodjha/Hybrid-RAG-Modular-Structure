@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, HTTPException
+from fastapi import APIRouter, UploadFile, HTTPException, File
 from app.core.settings import settings
 from app.ingestion.pdf import chunk_pdf
 from app.indexing.dense import build_dense_index
@@ -37,4 +37,5 @@ async def index(file: UploadFile):
     save_snapshot(settings.INDEX_DIR, STATE)
 
     return {"chunks_added": len(items), "total_chunks":len(STATE.TEXTS)}
+
 

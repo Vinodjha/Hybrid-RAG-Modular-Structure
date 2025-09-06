@@ -1,201 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAG Retrieval Service</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f9;
-            color: #333;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h1, h2 {
-            color: #0056b3;
-        }
-        .form-section {
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 20px;
-        }
-        input[type="file"], input[type="text"], button {
-            padding: 10px;
-            margin-top: 5px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-        input[type="text"] {
-            width: 70%;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-            width: 25%;
-            margin-left: 5px;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .response-container {
-            border: 1px solid #ccc;
-            padding: 15px;
-            background-color: #e9ecef;
-            border-radius: 5px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        .loading {
-            color: #007bff;
-            font-style: italic;
-        }
-        .error {
-            color: #dc3545;
-        }
-        .chunk {
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin-top: 10px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-        }
-        .chunk-header {
-            font-weight: bold;
-            color: #6c757d;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RAG Retrieval Service</title>
+  <style>
+    :root{
+      --bg:#0f172a;        /* dark slate */
+      --card:#111827;      /* darker card */
+      --text:#e5e7eb;      /* light text */
+      --muted:#94a3b8;     /* muted text */
+      --primary:#2563eb;   /* blue */
+      --primary-hover:#1d4ed8;
+      --border:#1f2937;
+      --accent:#22c55e;
+      --danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,Segoe UI,Roboto,Arial}
+    h1,h2{margin:0 0 10px}
+    h1{font-size:20px}
+    h2{font-size:16px;color:var(--muted)}
+    .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:16px;border-bottom:1px solid var(--border)}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;padding:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+    .span-12{grid-column:span 12}
+    .span-6{grid-column:span 6}
+    .span-8{grid-column:span 8}
+    .span-4{grid-column:span 4}
+    @media (max-width:900px){
+      .span-6,.span-8,.span-4{grid-column:span 12}
+    }
+    input[type="file"], input[type="text"], button{
+      padding:10px;border-radius:8px;border:1px solid var(--border);background:#0b1220;color:var(--text)
+    }
+    input[type="text"]{width:100%}
+    button{background:var(--primary);border-color:var(--primary);cursor:pointer}
+    button:hover{background:var(--primary-hover)}
+    .btn-secondary{background:#0b1220;border-color:var(--border)}
+    .btn-danger{background:var(--danger);border-color:var(--danger)}
+    .status{font-size:13px;color:var(--muted);margin-top:8px;white-space:pre-wrap}
+    .response{border:1px solid var(--border);background:#0b1220;border-radius:8px;padding:12px;white-space:pre-wrap}
+    .chunk{border:1px solid var(--border);padding:10px;margin-top:10px;background:#0b1220;border-radius:8px}
+    .chunk .head{font-weight:600;color:var(--muted)}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .grow{flex:1}
+    .ok{color:var(--accent)}
+    .err{color:var(--danger)}
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>RAG Retrieval Service</h1>
-        
-        <div class="form-section">
-            <h2>1. Index a PDF</h2>
-            <form id="indexForm">
-                <input type="file" id="pdfFile" name="file" accept=".pdf" required>
-                <button type="submit">Upload & Index</button>
-            </form>
-            <p id="indexStatus"></p>
-        </div>
-        
-        <hr>
+  <!-- Top toolbar: title + health + reset -->
+  <div class="toolbar">
+    <h1 class="grow">RAG Retrieval Service</h1>
+    <button id="btnHealth" class="btn-secondary">GET /health</button>
+    <span id="healthStatus" class="status">—</span>
+    <input id="sessionId" type="text" placeholder="session id (default)" style="width:220px" />
+    <button id="btnReset" class="btn-danger">POST /reset/{session_id}</button>
+    <span id="resetStatus" class="status"> </span>
+    <button id="btnWipe" class="btn-danger">POST /wipe (clear context)</button>
+    <span id="wipeStatus" class="status"></span>
 
-        <div class="form-section">
-            <h2>2. Ask a Question</h2>
-            <form id="queryForm">
-                <input type="text" id="queryText" placeholder="Enter your question..." required>
-                <button type="submit">Submit Query</button>
-            </form>
-            <p id="queryStatus"></p>
-        </div>
+  </div>
 
-        <hr>
-
-        <div class="response-container" id="responseDisplay">
-            <p>Responses will appear here...</p>
-        </div>
+  <!-- Main grid: full width -->
+  <div class="grid">
+    <!-- Upload -->
+    <div class="card span-6">
+      <h2>1) Index a PDF</h2>
+      <div class="row" style="margin-top:6px">
+        <input id="pdfFile" type="file" accept=".pdf" class="grow" />
+        <button id="btnUpload">Upload & Index</button>
+      </div>
+      <div id="indexStatus" class="status">—</div>
     </div>
 
-    <script>
-        document.getElementById('indexForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const status = document.getElementById('indexStatus');
-            status.textContent = 'Uploading and indexing...';
+    <!-- Ask -->
+    <div class="card span-6">
+      <h2>2) Ask a Question</h2>
+      <div class="row" style="margin-top:6px">
+        <input id="queryText" type="text" placeholder="Enter your question..." class="grow" />
+        <button id="btnAsk">Submit Query</button>
+      </div>
+      <div id="queryStatus" class="status">—</div>
+    </div>
 
-            const fileInput = document.getElementById('pdfFile');
-            const file = fileInput.files[0];
-            if (!file) {
-                status.textContent = 'Please select a file.';
-                return;
-            }
+    <!-- Answer -->
+    <div class="card span-8">
+      <h2>Answer</h2>
+      <div id="responseDisplay" class="response">Responses will appear here…</div>
+    </div>
 
-            const formData = new FormData();
-            formData.append('file', file);
+    <!-- Retrieved chunks -->
+    <div class="card span-4">
+      <h2>Retrieved Chunks</h2>
+      <div id="chunksBox" class="status">—</div>
+    </div>
+  </div>
 
-            try {
-                const response = await fetch('/index', {
-                    method: 'POST',
-                    body: formData,
-                });
+  <script>
+    // Base path (served from same origin). If you host UI elsewhere, change to absolute base.
+    const BASE = '';
 
-                if (response.ok) {
-                    const data = await response.json();
-                    status.textContent = `Success! Added ${data.chunks_added} chunks. Total chunks: ${data.total_chunks}`;
-                } else {
-                    const error = await response.json();
-                    status.textContent = `Error: ${error.detail}`;
-                }
-            } catch (error) {
-                status.textContent = 'An error occurred. Check the server logs.';
-                console.error('Error:', error);
-            }
+    // Health
+    document.getElementById('btnHealth').onclick = async () => {
+      const out = document.getElementById('healthStatus');
+      out.textContent = 'Checking…';
+      try{
+        const r = await fetch(`${BASE}/health`);
+        const t = await r.text();
+        out.innerHTML = (r.ok ? '<span class="ok">OK</span> ' : '<span class="err">ERR</span> ') + `HTTP ${r.status} ${t}`;
+      }catch(e){ out.innerHTML = `<span class="err">${e.message}</span>`; }
+    };
+
+    // Reset session (POST /reset/{session_id})
+    document.getElementById('btnReset').onclick = async () => {
+      const sid = (document.getElementById('sessionId').value || 'default').trim();
+      const out = document.getElementById('resetStatus');
+      out.textContent = 'Resetting…';
+      try{
+        const r = await fetch(`${BASE}/reset/${encodeURIComponent(sid)}`, { method:'POST' });
+        const t = await r.text();
+        out.innerHTML = (r.ok ? '<span class="ok">OK</span> ' : '<span class="err">ERR</span> ') + `HTTP ${r.status} ${t}`;
+      }catch(e){ out.innerHTML = `<span class="err">${e.message}</span>`; }
+    };
+
+    // Wipe all indexed data (POST /wipe)
+    document.getElementById('btnWipe').onclick = async () => {
+        const out = document.getElementById('wipeStatus');
+        out.textContent = 'Wiping…';
+        try{
+        const r = await fetch('/wipe', { method:'POST' });
+        const t = await r.text();
+        out.innerHTML = (r.ok ? '<span class="ok">OK</span> ' : '<span class="err">ERR</span> ')
+                        + `HTTP ${r.status} ${t}`;
+        // optional: auto-refresh health
+        try {
+            const h = await fetch('/health'); 
+            const ht = await h.text();
+            document.getElementById('healthStatus').innerHTML =
+            (h.ok ? '<span class="ok">OK</span> ' : '<span class="err">ERR</span> ')
+            + `HTTP ${h.status} ${ht}`;
+        } catch {}
+        }catch(e){
+        out.innerHTML = `<span class="err">${e.message}</span>`;
+        }
+    };
+
+    // Upload PDF → POST /index
+    document.getElementById('btnUpload').onclick = async (e) => {
+      const status = document.getElementById('indexStatus');
+      status.textContent = 'Uploading and indexing…';
+      const f = document.getElementById('pdfFile').files[0];
+      if(!f){ status.textContent = 'Please select a PDF.'; return; }
+      const fd = new FormData();
+      fd.append('file', f, f.name);
+      try{
+        const res = await fetch(`${BASE}/index`, { method:'POST', body: fd });
+        const txt = await res.text();
+        status.innerHTML = (res.ok ? '<span class="ok">Success</span> ' : '<span class="err">Error</span> ') + `HTTP ${res.status} ${txt}`;
+      }catch(err){
+        status.innerHTML = `<span class="err">${err.message}</span>`;
+      }
+    };
+
+    // Ask → POST /query
+    document.getElementById('btnAsk').onclick = async (e) => {
+      const qStatus = document.getElementById('queryStatus');
+      const display = document.getElementById('responseDisplay');
+      const chunksBox = document.getElementById('chunksBox');
+      const query = document.getElementById('queryText').value.trim();
+      const sessionId = (document.getElementById('sessionId').value || 'default').trim();
+
+      if(!query){ qStatus.textContent = 'Enter a question.'; return; }
+
+      qStatus.textContent = 'Sending query…';
+      display.textContent = 'Generating answer…';
+
+      try{
+        const res = await fetch(`${BASE}/query`, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify({ query, session_id: sessionId, max_answer_tokens: null })
         });
 
-        document.getElementById('queryForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const status = document.getElementById('queryStatus');
-            const display = document.getElementById('responseDisplay');
-            status.textContent = 'Sending query...';
-            display.innerHTML = '<p class="loading">Generating answer...</p>';
+        const data = await res.json().catch(()=> ({}));
+        if(res.ok){
+          qStatus.innerHTML = '<span class="ok">Success</span>';
+          display.textContent = data.answer || '(no answer)';
+          const rc = data.retrieved_chunks || [];
+          if(rc.length){
+            chunksBox.innerHTML = rc.map(d => `
+              <div class="chunk">
+                <div class="head">Source: ${d.source} • Page: ${d.page}</div>
+                <div>${escapeHtml(d.preview)}…</div>
+              </div>`).join('');
+          }else{
+            chunksBox.textContent = '—';
+          }
+        }else{
+          qStatus.innerHTML = '<span class="err">Error</span>';
+          display.textContent = data.detail ? `Error: ${data.detail}` : `HTTP ${res.status}`;
+          chunksBox.textContent = '—';
+        }
+      }catch(err){
+        qStatus.innerHTML = '<span class="err">Error</span>';
+        display.textContent = err.message;
+        chunksBox.textContent = '—';
+      }
+    };
 
-            const queryText = document.getElementById('queryText').value;
-            const sessionId = 'rag-session-1'; // We'll use a hardcoded session ID for simplicity
-
-            const payload = {
-                query: queryText,
-                session_id: sessionId,
-                max_answer_tokens: null
-            };
-
-            try {
-                const response = await fetch('/query', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload),
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    status.textContent = 'Success!';
-                    
-                    let htmlContent = `<h2>Answer:</h2><p>${data.answer}</p>`;
-                    if (data.retrieved_chunks && data.retrieved_chunks.length > 0) {
-                        htmlContent += '<h2>Retrieved Chunks:</h2>';
-                        data.retrieved_chunks.forEach(chunk => {
-                            htmlContent += `
-                                <div class="chunk">
-                                    <p class="chunk-header">Source: ${chunk.source}, Page: ${chunk.page}</p>
-                                    <p>${chunk.preview}...</p>
-                                </div>
-                            `;
-                        });
-                    }
-                    display.innerHTML = htmlContent;
-
-                } else {
-                    const error = await response.json();
-                    status.textContent = 'Error!';
-                    display.innerHTML = `<p class="error">Error: ${error.detail}</p>`;
-                }
-            } catch (error) {
-                status.textContent = 'An error occurred.';
-                display.innerHTML = `<p class="error">An error occurred. Check the server logs.</p>`;
-                console.error('Error:', error);
-            }
-        });
-    </script>
+    function escapeHtml(s){
+      return (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+  </script>
 </body>
 </html>
