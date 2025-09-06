@@ -1,6 +1,7 @@
 # FastAPI + ASGI server
 fastapi
 uvicorn
+python-multipart
 
 # Environment variables
 python-dotenv
